@@ -148,6 +148,8 @@ func (a *Server) PrivateHandler() http.Handler {
 				return
 			}
 			a.Provider.ServeHTTP(w, r)
+		case "/v1/admission":
+			a.admission(w, r)
 		case "/v1/logout":
 			a.logout(w, r)
 		case "/healthz":

@@ -2,7 +2,7 @@
 
 Decision record: **November 3, 2026**.
 
-Status: **agreed product requirements; five-minute access revalidation confirmed by the owner on November 3, 2026**. Service implementation and the Go client are provided in this repository; [the integration profile](docs/integration.md) records the selected protocol, exact endpoints and private-origin behavior. Product adaptations and real installed Google/Yard acceptance remain separate work. This document does not change released NoX MCP wire contracts.
+Status: **agreed product requirements; five-minute access revalidation confirmed by the owner on November 3, 2026**. Service implementation and the Go client are provided in this repository; [the integration profile](docs/integration.md) records the selected protocol, exact endpoints and private-origin behavior. Yard NoX Login has been accepted by the owner with real Google login; each further product adaptation retains its own acceptance. This document does not change released NoX MCP wire contracts.
 
 ## 1. Purpose and scope
 
@@ -89,6 +89,8 @@ Revocation notifications can shorten propagation; they must not extend the bound
 
 The same bounded validation must cover derived app sessions after Suite logout. The confirmed maximum interval is five minutes. It is distinct from the already approved five-minute limit on Backend-signed MCP operation delegations. Backend's Auth adapter must enforce account removal for subsequent personal-key authorization and invalidate affected cached authorizations; it must not restart a fresh full cache interval from an already stale admission result. Existing, independently valid MCP delegations remain bounded by their contract expiry.
 
+The private `/v1/admission` endpoint supplies account admission to registered applications that have already authenticated their own independent credentials (for example, a personal API key). It requires that application's local client credentials and grants no login, role or service permission. It does not depend on a browser session: browser/Suite logout does not revoke independent API keys, while central account removal prevents their subsequent admitted use within the same five-minute bound. This service capability is added after v0.0.1; update Auth before installing a consumer that requires it. Exact request and response are in `docs/integration.md`.
+
 ## 8. Product adaptation and data preservation
 
 Build and validate Auth first, then integrate **Yard first** and test its actual login/logout/restart behavior before adapting Backend and the other products. This is the owner's chosen integration order, not a replacement of the complete Suite design with a temporary contract.
@@ -132,4 +134,4 @@ Protocol references for the implemented integration profile:
 - [OpenID Connect Core](https://openid.net/specs/openid-connect-core-1_0.html): standard identity/code-flow baseline, with the private-origin profile specified above.
 - [OAuth security best current practice, RFC 9700](https://www.rfc-editor.org/rfc/rfc9700.html): transaction/code binding and callback validation considerations.
 
-This document does not deploy a service, publish a release, register an installed client or change an existing application. The implementation uses Go, SQLite and the maintained OIDC libraries recorded in the integration profile. Existing Yard/Backend login and Suite authorization remain unchanged until their explicitly scoped adaptations.
+This document does not deploy a service, publish a release, register an installed client or change an existing application. The implementation uses Go, SQLite and the maintained OIDC libraries recorded in the integration profile. Yard login has been adapted and accepted. Backend NoX Login is being adapted separately; deployment/service authorization is unchanged by this authentication work.

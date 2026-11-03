@@ -15,7 +15,7 @@ The issuer is the configured public HTTPS origin. It is fixed in persistent stor
 | Interface | Reachability | Routes |
 | --- | --- | --- |
 | Browser/metadata | TCP behind the configured HTTPS proxy/tunnel | GET `/authorize`, `/login`, `/auth/google/callback`, `/authorize/callback`, `/.well-known/openid-configuration`, `/keys`, `/healthz`, `/readyz`, `/` |
-| Runtime application | `/run/nox-suite/nox-auth.sock` only | POST `/oauth/token`, `/oauth/introspect`, `/revoke`, `/v1/logout`; GET/POST `/userinfo`; GET metadata/keys/health |
+| Runtime application | `/run/nox-suite/nox-auth.sock` only | POST `/oauth/token`, `/oauth/introspect`, `/revoke`, `/v1/logout`, `/v1/admission`; GET/POST `/userinfo`; GET metadata/keys/health |
 | Setup administration | `/run/nox-auth-admin/control.sock` only | PUT/DELETE `/v1/clients/{client_id}` |
 
 The two local directories are configurable; use their documented container mounts by default. Filesystem socket permissions are `0660`; the shared group is GID `10001` in the container. The Auth user is UID `10004`. A lock prevents another process from replacing an active listener; startup refuses to replace a regular file at a socket path. Supported service platforms are Linux and macOS. Runtime applications must never receive the separate administrator mount.
@@ -89,3 +89,11 @@ All allowed accounts currently receive the common administrative admission signa
 Keep Auth data and administrator mounts private, use the normal platform volume permissions, and route only browser/metadata TCP traffic through the Auth public proxy. Do not publish Unix sockets over TCP. Never put generated credentials into source control. Back up the Auth data volume; ordinary update/recreate must retain it. Startup uses static Google metadata and does not depend on Google's discovery endpoint being available. A new Google exchange/JWKS refresh requires Google connectivity; ordinary session checks use local state.
 
 CI and local tests exercise real HTTP OIDC code exchange, private hostname/IP callbacks, SSO between independent clients, forgery/binding/replay/expiry/concurrent redemption rejection, local/global logout, account removal/re-add, persistent signing/encryption state and bounded cache/outage behavior. Google validation uses signed tokens and a controlled JWKS/token server. A successful real Google login and the first installed Yard adapter remain acceptance work with the operator's actual configuration; they are not inferred from fixture tests.
+
+## Independent application credentials: account admission
+
+The next service release adds private `POST /v1/admission`, authenticated with the registered client's Basic credentials over the runtime Unix socket. JSON input is `{"email":"account@example.test","google_sub":"previously-verified-google-subject"}`; `google_sub` is optional for existing application accounts that have never completed browser login. The response is `{"allowed":true}` or false. If Auth already knows the email's Google subject, a supplied conflicting subject is refused.
+
+This is only a secondary central-admission check after the application has verified its own API key and domain permissions. It does not authenticate a browser, return identity claims, create a session, grant product permissions or replace OIDC. App/global browser logout does not revoke independent API keys. Removing an email from Auth configuration refuses this check immediately after configuration is applied. Consumers reuse a positive check for at most five minutes from the request start; they never extend it after a failure. Derived MCP grants must not outlive that admission result and start another full stale interval. The public Auth handler does not expose this route.
+
+Backend consumes the published v0.0.1 client for OIDC/local HTTP transport; its adaptation additionally requires the service release containing this endpoint. Upgrade Auth before deploying that Backend adaptation. No Google or per-user credentials are added to products.

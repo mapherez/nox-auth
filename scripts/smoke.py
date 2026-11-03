@@ -62,7 +62,7 @@ def main():
                 if key is not None:
                     assert key == keys, 'Keys changed after restart'
                 key = keys
-                for path in ('/oauth/token', '/oauth/introspect', '/v1/clients/x', '/v1/logout'):
+                for path in ('/oauth/token', '/oauth/introspect', '/v1/admission', '/v1/clients/x', '/v1/logout'):
                     try:
                         get(origin + path)
                     except urllib.error.HTTPError as error:

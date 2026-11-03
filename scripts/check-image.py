@@ -59,7 +59,7 @@ def main():
             if key is not None:
                 assert current == key, 'Image recreation lost identity'
             key = current
-            for path in ('/oauth/token', '/oauth/introspect', '/v1/logout', '/v1/clients/app'):
+            for path in ('/oauth/token', '/oauth/introspect', '/v1/admission', '/v1/logout', '/v1/clients/app'):
                 try:
                     get(origin + path)
                 except urllib.error.HTTPError as error:
