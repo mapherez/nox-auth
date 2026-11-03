@@ -1,0 +1,25 @@
+name: nox-auth
+services:
+  auth:
+    image: ghcr.io/mapherez/nox-auth:${NOX_AUTH_IMAGE_TAG:-latest}
+    restart: unless-stopped
+    ports:
+      - "${NOX_AUTH_PORT:-5712}:8080"
+    environment:
+      NOX_AUTH_PUBLIC_URL: "${NOX_AUTH_PUBLIC_URL:?Configure the Auth HTTPS origin}"
+      NOX_AUTH_GOOGLE_CLIENT_ID: "${NOX_AUTH_GOOGLE_CLIENT_ID:?Configure the Google client ID}"
+      NOX_AUTH_GOOGLE_CLIENT_SECRET: "${NOX_AUTH_GOOGLE_CLIENT_SECRET:?Configure the Google client secret}"
+      NOX_AUTH_ALLOWED_EMAILS: "${NOX_AUTH_ALLOWED_EMAILS:?Configure the allowed account emails}"
+    volumes:
+      - auth-data:/data
+      - nox-suite-local:/run/nox-suite
+      - auth-admin:/run/nox-auth-admin
+volumes:
+  auth-data:
+    name: "${NOX_AUTH_DATA_VOLUME_NAME:-nox-auth-data}"
+  nox-suite-local:
+    name: "${NOX_SUITE_LOCAL_VOLUME_NAME:-nox-suite-local}"
+    driver: local
+  auth-admin:
+    name: "${NOX_AUTH_ADMIN_VOLUME_NAME:-nox-auth-admin}"
+    driver: local

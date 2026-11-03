@@ -1,0 +1,9 @@
+{
+  "name": "nox-auth",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "check": "sh scripts/check.sh",
+    "release": "node scripts/release.mjs"
+  }
+}

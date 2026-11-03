@@ -1,0 +1,7 @@
+services:
+  auth:
+    image: nox-auth:dev
+    build:
+      context: .
+      args:
+        VERSION: dev

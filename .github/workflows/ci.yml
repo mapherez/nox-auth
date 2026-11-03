@@ -1,0 +1,56 @@
+name: CI
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+permissions:
+  contents: read
+concurrency:
+  group: auth-ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  auth:
+    name: Auth / ${{ matrix.os }} / Go ${{ matrix.go }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            go: '1.26.0'
+          - os: ubuntu-latest
+            go: stable
+          - os: macos-latest
+            go: stable
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-go@v7
+        with:
+          go-version: ${{ matrix.go }}
+          cache-dependency-path: go.sum
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Format, dependencies, vet, race tests and actual binary
+        run: sh scripts/check.sh
+      - name: Linux deployment targets
+        if: runner.os == 'Linux' && matrix.go == '1.26.0'
+        run: |
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -mod=readonly -trimpath -o bin/nox-auth-linux-amd64 ./cmd/nox-auth
+          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -mod=readonly -trimpath -o bin/nox-auth-linux-arm64 ./cmd/nox-auth
+  image:
+    name: Packaged Auth
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: docker build --build-arg VERSION=ci-validation -t nox-auth:ci .
+      - run: python3 scripts/check-image.py --image nox-auth:ci --version ci-validation

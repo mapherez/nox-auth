@@ -1,0 +1,8 @@
+.env
+.env.*
+!.env.example
+/bin/
+/data/
+*.sqlite*
+*.sock
+.DS_Store
