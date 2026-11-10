@@ -1,62 +1,87 @@
 # NoX Auth
 
-One Google-backed login for your NoX applications.
+One Google-backed login for your NoX apps.
 
-NoX Auth provides **NoX Login**: an application sends you to the shared authentication service, you sign in with an allowed Google account, and you return to the application you opened.
+NoX Auth provides the **NoX Login** button used by participating apps. Click it, choose your allowed Google account and return to the app you were opening. If you are already signed in, another participating app can reuse that sign-in.
 
-Google credentials and the allowed-account list are configured in one place. Participating applications use the same identity service instead of each maintaining a separate Google login setup or account-admission list.
+Configure your Google credentials and allowed accounts once, in Auth, instead of repeating the setup in every app.
 
-## What it provides
+- Only the Google accounts you explicitly allow can sign in.
+- Shared sign-in across participating NoX apps.
+- Persistent sessions across normal service restarts.
+- Sign out of one app, or use Backend's shared logout control.
 
-| Capability | What it does |
-| --- | --- |
-| Central account admission | Allows only the Google accounts configured for the installation. |
-| Shared sign-in | Reuses an existing Auth session when you enter another participating app in the same browser. |
-| Persistent sessions | Retains identity and session state across normal service restarts and updates. |
-| Local logout | Lets an application end its own session without signing out every other app. |
-| Suite logout | Supports Backend's shared-session logout control across participating applications. |
-| Independent credential checks | Lets a registered application check central admission after validating its own API key. |
-| Reusable client helpers | Provides a Go client for the private login and session exchanges. |
+Auth runs in the background and has no management dashboard. You manage its settings through the container's environment. Each app keeps its own interface and application data.
 
-Auth is a headless service with no dashboard. Applications keep their own frontends, data and domain permissions. A login session is distinct from a Backend personal API key, a service credential or an external integration such as Discord.
+## What you need
 
-## How it fits into NoX Suite
+- Docker with Docker Compose on the same host as your participating NoX apps.
+- A Google OAuth web application with a client ID and client secret.
+- An **HTTPS address for Auth**, served by your reverse proxy or tunnel.
 
-Auth runs alongside the participating applications on the same host. Its browser-facing Google callback uses HTTPS; an application's own private HTTP address does not need a separate Google client, public tunnel or manually generated certificate.
+Only Auth's Google-facing address requires HTTPS. Your apps can keep their private HTTP addresses. The Google credentials belong only in Auth; you do not need a separate Google client for each app.
 
-Confidential token/session exchanges use the private local channel. Login-client registration uses a separate restricted setup channel. Backend and Yard already include one-shot setup services that register their configured callbacks automatically and reuse the persisted client identity.
+## Help
 
-Auth owns admission and session revocation. Backend owns Suite registration and delegated operation authority; Yard and Gateway keep their deployment and routing responsibilities.
-
-## Documentation
-
-- [NoX Login contract](NOX_AUTH_CONTRACT.md)
-- [Application integration and API reference](docs/integration.md)
-- [Security boundary and reporting](SECURITY.md)
-- [Changelog](CHANGELOG.md)
+[Application integration and troubleshooting](docs/integration.md) · [Login and session reference](NOX_AUTH_CONTRACT.md) · [Security reporting](SECURITY.md)
 
 ## Usage
 
-Save [docker-compose.yml](docker-compose.yml) and [.env.example](.env.example) in a deployment directory, naming the environment file `.env`.
+### Install
 
-Configure:
+On your Docker server, download the deployment files into a new folder:
 
-- `NOX_AUTH_PUBLIC_URL`: the Auth HTTPS origin used by your browser.
-- `NOX_AUTH_GOOGLE_CLIENT_ID` and `NOX_AUTH_GOOGLE_CLIENT_SECRET`: the credentials for your Google web application.
-- `NOX_AUTH_ALLOWED_EMAILS`: the Google accounts allowed to sign in.
+```sh
+mkdir nox-auth
+cd nox-auth
+curl -fsSLo docker-compose.yml https://raw.githubusercontent.com/mapherez/nox-auth/main/docker-compose.yml
+curl -fsSLo .env https://raw.githubusercontent.com/mapherez/nox-auth/main/.env.example
+```
 
-Register your configured Auth origin followed by `/auth/google/callback` as the Google application's redirect URI. Your proxy or tunnel forwards browser requests to Auth's published HTTP listener. Product callbacks are registered with Auth rather than separately with Google.
+Open `.env` in a text editor and set:
 
-Start Auth before its consumers:
+| Setting | What to enter |
+| --- | --- |
+| `NOX_AUTH_PUBLIC_URL` | Your Auth HTTPS base address. |
+| `NOX_AUTH_GOOGLE_CLIENT_ID` | Your Google OAuth web application's client ID. |
+| `NOX_AUTH_GOOGLE_CLIENT_SECRET` | Its client secret. |
+| `NOX_AUTH_ALLOWED_EMAILS` | The Google account emails allowed to sign in, separated by commas. |
+
+In your [Google Cloud Console](https://console.cloud.google.com/), configure the OAuth web application's authorized redirect URI as your Auth address followed by **`/auth/google/callback`**. Keep `.env` private.
+
+The supplied Compose file publishes Auth's **HTTP** listener on host port **5712**. Point your HTTPS proxy or tunnel to that listener using **HTTP** as the upstream protocol. Do not select HTTPS for the upstream unless you separately configured it there. If you change the host port with `NOX_AUTH_PORT`, update the upstream destination to match.
+
+Start Auth:
 
 ```sh
 docker compose pull
 docker compose up -d
 ```
 
-Configure each participating application's Auth origin using that application's deployment guide. Its setup component registers the exact callback automatically; do not copy Google secrets into every product.
+Open your Auth HTTPS address followed by `/healthz`; a working service returns `{"status":"ok"}`.
 
-Keep Auth's data volume when updating. It holds signing/encryption material, clients and session state. Apply account-list changes by recreating the service with the updated environment. Revocation is enforced within the documented [session-validation bound](docs/integration.md#logout-and-account-removal); editing an environment file alone does not change a running container.
+### Use NoX Login in an app
+
+Start Auth before Backend or Yard. In each app's configuration, set `NOX_AUTH_PUBLIC_URL` to the same Auth address. Their supplied Compose files register their login callbacks automatically through the shared local volumes.
+
+Open the app and choose **NoX Login**. Use one of the accounts listed in Auth's `.env`. Other accounts are refused. There is no separate Auth dashboard to open first.
+
+### Update or change allowed accounts
+
+After editing `.env`, apply it from the installation folder:
+
+```sh
+docker compose up -d
+```
+
+To update the service image as well:
+
+```sh
+docker compose pull
+docker compose up -d
+```
+
+Keep Auth's data volume: it holds the keys, registered apps and session state. Removing an email from the running configuration also invalidates its existing sessions within **five minutes**; it does not depend on asking Google to sign in again. See [logout and account removal](docs/integration.md#logout-and-account-removal).
 
 ## License & Attribution
 
