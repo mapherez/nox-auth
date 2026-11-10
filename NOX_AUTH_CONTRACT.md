@@ -2,13 +2,13 @@
 
 Decision record: **November 3, 2026**.
 
-Status: **agreed product requirements; five-minute access revalidation confirmed by the owner on November 3, 2026**. Service implementation and the Go client are provided in this repository; [the integration profile](docs/integration.md) records the selected protocol, exact endpoints and private-origin behavior. Yard NoX Login has been accepted by the owner with real Google login; each further product adaptation retains its own acceptance. This document does not change released NoX MCP wire contracts.
+Status: **agreed product requirements; five-minute access revalidation confirmed by the owner on November 3, 2026**. Service implementation and the Go client are provided in this repository; [the integration profile](docs/integration.md) records the selected protocol, exact endpoints and private-origin behavior. Backend and Yard implement NoX Login; installed Google login and shared-session logout initiated in Backend have been confirmed. Each additional application implements the same contract. This document does not change released NoX MCP wire contracts.
 
 ## 1. Purpose and scope
 
 NoX Auth is the shared Google-backed login service for any current or future NoX application. Users sign in through a **NoX Login** button and return to the application they opened. Applications consume the same integration contract, without implementing Google login or maintaining separate account allowlists.
 
-NoX Auth is a running service/container, not just a library installed in every application. It has **no frontend or management dashboard**. Its browser-facing functions are authentication redirects, callbacks and session endpoints. Applications display their own login controls, results and errors. Reusable integration packages may accompany the service once the protocol is specified; they do not replace it.
+NoX Auth is a running service/container, not just a library installed in every application. It has **no frontend or management dashboard**. Its browser-facing functions are authentication redirects, callbacks and session endpoints. Applications display their own login controls, results and errors. The published Go client supplies reusable integration helpers; it does not replace the running service.
 
 NoX Auth does not install containers, register product MCP servers, replace the Backend's registry or issue its personal API keys. Yard retains deployment/lifecycle responsibilities; Backend retains registration and delegated operation authorization; Gateway retains MCP routing; CLI remains a separate product.
 
@@ -32,7 +32,7 @@ Applications trust the configured Auth issuer and a stable subject belonging to 
 
 The intended access policy is the same authorized Google identity across NoX applications, including Suite administrative access. Products must consume central admission/administrative authority instead of requiring a second local administrator approval or separate allowlist. This does not introduce a new per-user/per-tool permission editor. Existing data ownership, domain validity, confirmation and external-platform permissions remain enforced.
 
-A human administrator and a service are different actors. Logging into Yard through Auth does **not** turn Yard's service credential into an administrator credential. Backend continues to require authorized administration for deployment associations. The rejected installer self-authorization must remain absent. The future adapter must bind an authorized user's deployment action to the intended registration operation without forwarding browser cookies or a personal API key as the Yard service identity. Its concrete authorization flow must be specified before changing those checks; shared login alone does not implement that flow.
+A human administrator and a service are different actors. Backend's administrative installer pairing delegates management of that installer's own deployments. Yard uses its scoped service credential over the private same-host channel; it does not forward personal Auth tokens or request another account approval per installation. Backend enforces deployment ownership, canonical local targets and the enrolled service's scopes. That delegation grants no Backend account/key administration and does not permit a service to grant itself global authority.
 
 ## 4. Browser login journey
 
@@ -69,11 +69,11 @@ A year-long session is not an unconditional year-long access grant. Applications
 
 ### Local logout
 
-**Sair** invalidates the current application's session and clears its cookie. It leaves the Auth session and other applications' sessions intact. A later deliberate NoX Login may therefore sign back in without Google account selection. Logout must not immediately run an automatic login loop that defeats the user's action.
+**Log out** invalidates the current application's session and clears its cookie. It leaves the Auth session and other applications' sessions intact. A later deliberate NoX Login may therefore sign back in without Google account selection. Logout must not immediately run an automatic login loop that defeats the user's action.
 
 ### Suite logout
 
-**Sair de todas** is presented in the **Backend's native dashboard**, and later in the NoX Portal. It invokes Auth's authenticated session-revocation operation; it does not require an Auth frontend. It terminates the current Auth login session and the application sessions derived from it across the Suite. It does not sign out the user's Google account or disconnect Discord integrations. A separate cross-device session-management screen has not been requested.
+**Sign out of all NoX apps** is presented in the **Backend's native dashboard**, and later in the NoX Portal. It invokes Auth's authenticated session-revocation operation; it does not require an Auth frontend. It terminates the current Auth login session and the application sessions derived from it across the Suite. It does not sign out the user's Google account or disconnect Discord integrations. A separate cross-device session-management screen has not been requested.
 
 Other applications must reject those derived sessions when notified or when they next validate them, within the agreed revocation bound. The UI must distinguish accepted revocation from a failed request; clearing only the Backend cookie is not a successful global logout. Use CSRF protection and invalidate the invoking application's session as well.
 
@@ -93,12 +93,12 @@ The private `/v1/admission` endpoint supplies account admission to registered ap
 
 ## 8. Product adaptation and data preservation
 
-Build and validate Auth first, then integrate **Yard first** and test its actual login/logout/restart behavior before adapting Backend and the other products. This is the owner's chosen integration order, not a replacement of the complete Suite design with a temporary contract.
+Auth, Yard and Backend are integrated. Their login adapters preserve existing product data and use central account admission. Other products consume the same protocol without adding product-specific branches to Auth.
 
 | Application | Agreed adaptation |
 | --- | --- |
-| Yard | NoX Login replaces dashboard username/password login. Preserve installation-level projects, configuration, jobs and Docker management. No extra fallback-login feature is requested. |
-| Backend | Replace its own Google dashboard login with NoX Login; move Google credentials/account admission to Auth. Preserve its native frontend, existing users/data relationships, API-key services and existing client APIs. Add Suite logout control here. |
+| Yard | Implemented: NoX Login replaces dashboard username/password login. Preserve installation-level projects, configuration, jobs and Docker management. No extra fallback-login feature is requested. |
+| Backend | Implemented: NoX Login replaces native Google login; Google credentials/admission reside in Auth. The native frontend, users/data relationships, API keys and client APIs are retained. Backend provides Suite logout. |
 | Voice MLX | Consume NoX Login instead of its separate Google login/allowlist; preserve product functionality and state. |
 | Bot | Dashboard entry uses NoX Login. Move Discord connection to a settings/integration action. Persist the Discord identity/linkage independently of dashboard session lifetime; retain the bot's own Discord token and domain permissions. Do not invent a token-refresh requirement where the existing integration only needs identity. |
 | Future applications | Implement this same client integration; do not add product-specific branches in Auth. |
@@ -122,7 +122,7 @@ Implementation is complete only after demonstrating:
 - No service self-grant, no browser-cookie forwarding as a service credential and no weakening of Backend deployment authorization.
 - Portable sample configuration, container packaging and operational instructions for a different installation.
 
-Auth tests do not certify unfinished Yard lifecycle integration, MCP descriptors, Gateway routing or the CLI. Those retain their existing scoped work and acceptance criteria.
+Auth tests cover the authentication service/client boundary. Yard deployment lifecycle, product MCP adapters, Gateway routing and CLI execution are implemented and verified in their respective repositories; they are not supplied by Auth.
 
 ## 10. References and implementation status
 
@@ -134,4 +134,4 @@ Protocol references for the implemented integration profile:
 - [OpenID Connect Core](https://openid.net/specs/openid-connect-core-1_0.html): standard identity/code-flow baseline, with the private-origin profile specified above.
 - [OAuth security best current practice, RFC 9700](https://www.rfc-editor.org/rfc/rfc9700.html): transaction/code binding and callback validation considerations.
 
-This document does not deploy a service, publish a release, register an installed client or change an existing application. The implementation uses Go, SQLite and the maintained OIDC libraries recorded in the integration profile. Yard login has been adapted and accepted. Backend NoX Login is being adapted separately; deployment/service authorization is unchanged by this authentication work.
+This document does not deploy a service, publish a release, register an installed client or change an existing application. The implementation uses Go, SQLite and the maintained OIDC libraries recorded in the integration profile. Backend and Yard use the shared login and automatic enrollment. Existing data ownership and scoped service authorization remain enforced independently of browser login.

@@ -1,6 +1,6 @@
 # NoX Login integration profile
 
-Implemented service profile, November 3, 2026. Human admission revalidation is **five minutes maximum**, approved by the owner. This document specifies Auth's API; it does not advertise OIDC certification of the complete NoX deployment or implemented product adapters.
+Implemented service profile, updated November 10, 2026. Human admission revalidation is **five minutes maximum**, approved by the owner. This document specifies Auth's API; it does not advertise OIDC certification of the complete NoX deployment or implemented product adapters.
 
 ## Protocol and transports
 
@@ -40,7 +40,7 @@ The secret is generated/persisted once by the authorized controller, not supplie
 
 Success is HTTP 200 with `client_id`, `redirect_uris`, `suite_logout`; it does not echo the secret. Repeating an unchanged registration is safe. Changed registration invalidates existing app credentials and pending login requests. DELETE removes admission for that client and revokes its tokens. `suite_logout: true` is an additional administrative client capability reserved for the designated dashboard/Portal controls, rather than every runtime app.
 
-The Go `client.Register` helper operates on this socket. Its caller must be the authorized setup controller. Its future integration into Yard/Backend setup remains separate work; Auth does not modify either product to mount its administrative capability automatically.
+The Go `client.Register` helper operates on this socket. Its caller must be the authorized setup controller. Backend and Yard use it from their one-shot `auth-setup` services, with the administrative mount separated from the runtime application. Additional products implement their own setup adapters against this API.
 
 ## Login and browser transaction binding
 
@@ -78,22 +78,22 @@ POST `/v1/logout` over the runtime socket, with Basic client authentication and 
 
 `app` revokes that app's session credential. The application also invalidates its own session/cookie and displays its signed-out page, without immediately triggering another login. Other app sessions and Auth SSO remain valid.
 
-`suite` additionally requires the caller client's `suite_logout` capability. It revokes the originating Auth browser session and all derived app credentials, including the invoking app. HTTP 204 means revocation was committed; an error must not be presented as successful Suite logout. Other apps stop accepting their cached confirmations within five minutes. Independent sessions on other devices remain separate. Google and persistent Discord linkage are not revoked. Backend's dashboard, then Portal, will own that UI in their adaptation work; Auth supplies no logout dashboard.
+`suite` additionally requires the caller client's `suite_logout` capability. It revokes the originating Auth browser session and all derived app credentials, including the invoking app. HTTP 204 means revocation was committed; an error must not be presented as successful Suite logout. Other apps stop accepting their cached confirmations within five minutes. Independent sessions on other devices remain separate. Google and persistent Discord linkage are not revoked. Backend's dashboard already provides the Suite logout action. Portal may provide that control when implemented; Auth supplies no logout dashboard.
 
 After central allowed-email configuration is applied, Auth immediately refuses a removed account and marks its existing root sessions revoked in persistent storage. Subsequent app checks return inactive; positive checks made before removal remain bounded by the same five-minute limit. Reinstating the email does not un-revoke old sessions. Applying environment changes means recreating with the same data volume and updated environment, rather than just editing a file.
 
-All allowed accounts currently receive the common administrative admission signal; no local per-app admission list or extra role editor is introduced. Products retain domain/data/platform restrictions. A login token is not permission for Yard's service credential to approve its own Backend deployment association. The human-action-to-Backend authorization adapter must still be specified in that product work.
+All allowed accounts currently receive the common administrative admission signal; no local per-app admission list or extra role editor is introduced. Products retain domain/data/platform restrictions. A login token is not a service credential. Backend's administrative installer pairing delegates management of that installer's own local deployments. Yard uses that scoped service authority without forwarding the user's personal Auth token; it cannot grant itself global Backend administration.
 
 ## Operational boundaries and acceptance
 
 Keep Auth data and administrator mounts private, use the normal platform volume permissions, and route only browser/metadata TCP traffic through the Auth public proxy. Do not publish Unix sockets over TCP. Never put generated credentials into source control. Back up the Auth data volume; ordinary update/recreate must retain it. Startup uses static Google metadata and does not depend on Google's discovery endpoint being available. A new Google exchange/JWKS refresh requires Google connectivity; ordinary session checks use local state.
 
-CI and local tests exercise real HTTP OIDC code exchange, private hostname/IP callbacks, SSO between independent clients, forgery/binding/replay/expiry/concurrent redemption rejection, local/global logout, account removal/re-add, persistent signing/encryption state and bounded cache/outage behavior. Google validation uses signed tokens and a controlled JWKS/token server. A successful real Google login and the first installed Yard adapter remain acceptance work with the operator's actual configuration; they are not inferred from fixture tests.
+CI and local tests exercise real HTTP OIDC code exchange, private hostname/IP callbacks, SSO between independent clients, forgery/binding/replay/expiry/concurrent redemption rejection, local/global logout, account removal/re-add, persistent signing/encryption state and bounded cache/outage behavior. Google validation uses signed tokens and a controlled JWKS/token server. Real Google login in Yard and Backend, plus shared-session logout initiated in Backend, have also been confirmed on an installed deployment. Fixture tests remain independent checks rather than proof of any other installation.
 
 ## Independent application credentials: account admission
 
-The next service release adds private `POST /v1/admission`, authenticated with the registered client's Basic credentials over the runtime Unix socket. JSON input is `{"email":"account@example.test","google_sub":"previously-verified-google-subject"}`; `google_sub` is optional for existing application accounts that have never completed browser login. The response is `{"allowed":true}` or false. If Auth already knows the email's Google subject, a supplied conflicting subject is refused.
+Auth service v0.0.2 provides private `POST /v1/admission`, authenticated with the registered client's Basic credentials over the runtime Unix socket. JSON input is `{"email":"account@example.test","google_sub":"previously-verified-google-subject"}`; `google_sub` is optional for existing application accounts that have never completed browser login. The response is `{"allowed":true}` or false. If Auth already knows the email's Google subject, a supplied conflicting subject is refused.
 
 This is only a secondary central-admission check after the application has verified its own API key and domain permissions. It does not authenticate a browser, return identity claims, create a session, grant product permissions or replace OIDC. App/global browser logout does not revoke independent API keys. Removing an email from Auth configuration refuses this check immediately after configuration is applied. Consumers reuse a positive check for at most five minutes from the request start; they never extend it after a failure. Derived MCP grants must not outlive that admission result and start another full stale interval. The public Auth handler does not expose this route.
 
-Backend consumes the published v0.0.1 client for OIDC/local HTTP transport; its adaptation additionally requires the service release containing this endpoint. Upgrade Auth before deploying that Backend adaptation. No Google or per-user credentials are added to products.
+Backend consumes the published v0.0.1 client for OIDC/local HTTP transport and uses `/v1/admission` for independent personal-key access. Run Auth service v0.0.2 or a compatible later service before deploying Backend. The service capability and client-module version are separate; no Google or per-user credentials are added to products.
