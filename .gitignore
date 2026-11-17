@@ -6,3 +6,6 @@
 *.sqlite*
 *.sock
 .DS_Store
+
+# Local Node tooling dependencies
+node_modules/

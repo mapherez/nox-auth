@@ -9,12 +9,12 @@ ARG VERSION=dev
 RUN CGO_ENABLED=0 go build -mod=readonly -trimpath -ldflags "-X main.version=${VERSION}" -o /out/nox-auth ./cmd/nox-auth
 FROM alpine:3.23
 RUN apk add --no-cache ca-certificates \
- && addgroup -g 10001 noxsuite \
- && adduser -D -H -u 10004 -G noxsuite noxauth \
- && mkdir -p /data /run/nox-suite /run/nox-auth-admin \
- && chown 10004:10001 /data /run/nox-suite /run/nox-auth-admin \
- && chmod 0700 /data \
- && chmod 3770 /run/nox-suite /run/nox-auth-admin
+  && addgroup -g 10001 noxsuite \
+  && adduser -D -H -u 10004 -G noxsuite noxauth \
+  && mkdir -p /data /run/nox-suite /run/nox-auth-admin \
+  && chown 10004:10001 /data /run/nox-suite /run/nox-auth-admin \
+  && chmod 0700 /data \
+  && chmod 3770 /run/nox-suite /run/nox-auth-admin
 COPY --from=build /out/nox-auth /usr/local/bin/nox-auth
 ENV NOX_AUTH_LISTEN_ADDR=0.0.0.0:8080 NOX_AUTH_DATA_DIR=/data NOX_AUTH_SUITE_SOCKET_DIR=/run/nox-suite NOX_AUTH_ADMIN_SOCKET_DIR=/run/nox-auth-admin
 USER noxauth

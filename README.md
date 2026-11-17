@@ -40,12 +40,12 @@ curl -fsSLo .env https://raw.githubusercontent.com/mapherez/nox-auth/main/.env.e
 
 Open `.env` in a text editor and set:
 
-| Setting | What to enter |
-| --- | --- |
-| `NOX_AUTH_PUBLIC_URL` | Your Auth HTTPS base address. |
-| `NOX_AUTH_GOOGLE_CLIENT_ID` | Your Google OAuth web application's client ID. |
-| `NOX_AUTH_GOOGLE_CLIENT_SECRET` | Its client secret. |
-| `NOX_AUTH_ALLOWED_EMAILS` | The Google account emails allowed to sign in, separated by commas. |
+| Setting                         | What to enter                                                      |
+| ------------------------------- | ------------------------------------------------------------------ |
+| `NOX_AUTH_PUBLIC_URL`           | Your Auth HTTPS base address.                                      |
+| `NOX_AUTH_GOOGLE_CLIENT_ID`     | Your Google OAuth web application's client ID.                     |
+| `NOX_AUTH_GOOGLE_CLIENT_SECRET` | Its client secret.                                                 |
+| `NOX_AUTH_ALLOWED_EMAILS`       | The Google account emails allowed to sign in, separated by commas. |
 
 In your [Google Cloud Console](https://console.cloud.google.com/), configure the OAuth web application's authorized redirect URI as your Auth address followed by **`/auth/google/callback`**. Keep `.env` private.
 
@@ -96,7 +96,7 @@ If you use, fork, or modify this code, you **must** provide attribution by linki
 
 ---
 
-*For more details on what you can and cannot do, please refer to the [LICENSE](LICENSE) file in this repository.*
+_For more details on what you can and cannot do, please refer to the [LICENSE](LICENSE) file in this repository._
 
 ## Disclaimer of Warranty
 

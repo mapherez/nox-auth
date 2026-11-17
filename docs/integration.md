@@ -12,11 +12,11 @@ The provider's ordinary confidential web-client validation accepts exactly regis
 
 The issuer is the configured public HTTPS origin. It is fixed in persistent storage and does not follow untrusted Host/Forwarded headers. Changing the URL of an existing installation requires an explicit issuer transition; startup refuses to silently change the persisted identity.
 
-| Interface | Reachability | Routes |
-| --- | --- | --- |
-| Browser/metadata | TCP behind the configured HTTPS proxy/tunnel | GET `/authorize`, `/login`, `/auth/google/callback`, `/authorize/callback`, `/.well-known/openid-configuration`, `/keys`, `/healthz`, `/readyz`, `/` |
-| Runtime application | `/run/nox-suite/nox-auth.sock` only | POST `/oauth/token`, `/oauth/introspect`, `/revoke`, `/v1/logout`, `/v1/admission`; GET/POST `/userinfo`; GET metadata/keys/health |
-| Setup administration | `/run/nox-auth-admin/control.sock` only | PUT/DELETE `/v1/clients/{client_id}` |
+| Interface            | Reachability                                 | Routes                                                                                                                                               |
+| -------------------- | -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Browser/metadata     | TCP behind the configured HTTPS proxy/tunnel | GET `/authorize`, `/login`, `/auth/google/callback`, `/authorize/callback`, `/.well-known/openid-configuration`, `/keys`, `/healthz`, `/readyz`, `/` |
+| Runtime application  | `/run/nox-suite/nox-auth.sock` only          | POST `/oauth/token`, `/oauth/introspect`, `/revoke`, `/v1/logout`, `/v1/admission`; GET/POST `/userinfo`; GET metadata/keys/health                   |
+| Setup administration | `/run/nox-auth-admin/control.sock` only      | PUT/DELETE `/v1/clients/{client_id}`                                                                                                                 |
 
 The two local directories are configurable; use their documented container mounts by default. Filesystem socket permissions are `0660`; the shared group is GID `10001` in the container. The Auth user is UID `10004`. A lock prevents another process from replacing an active listener; startup refuses to replace a regular file at a socket path. Supported service platforms are Linux and macOS. Runtime applications must never receive the separate administrator mount.
 
@@ -73,7 +73,7 @@ Auth renews session records with use. The browser's Auth cookie must also be ren
 POST `/v1/logout` over the runtime socket, with Basic client authentication and JSON:
 
 ```json
-{"token":"the-app-bound-server-side-access-token","scope":"app"}
+{ "token": "the-app-bound-server-side-access-token", "scope": "app" }
 ```
 
 `app` revokes that app's session credential. The application also invalidates its own session/cookie and displays its signed-out page, without immediately triggering another login. Other app sessions and Auth SSO remain valid.

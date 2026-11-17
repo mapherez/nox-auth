@@ -6,3 +6,4 @@
 bin
 data
 *.sqlite*
+**/node_modules
