@@ -1,0 +1,15 @@
+{
+  "workflow": "ci.yml",
+  "marker": "nox-auth-Release:",
+  "branch": "main",
+  "files": [
+    {
+      "path": "package.json",
+      "fields": [
+        [
+          "version"
+        ]
+      ]
+    }
+  ]
+}
